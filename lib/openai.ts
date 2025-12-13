@@ -200,7 +200,7 @@ export async function generateImage(prompt: string) {
       quality: 'hd',
     })
 
-    return response.data[0].url
+    return response.data?.[0]?.url ?? ''
   } catch (error) {
     console.error('Error generating image:', error)
     throw error

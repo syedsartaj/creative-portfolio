@@ -1,9 +1,11 @@
-'use client'
-
 import Image from 'next/image'
 import { motion } from 'framer-motion'
 import BlogCard from '@/components/BlogCard'
 import GalleryGrid from '@/components/GalleryGrid'
+import { getSmakslyBlogs, formatBlogDate, estimateReadTime, SmakslyBlog } from '@/lib/smaksly-blogs'
+
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
 
 const featuredWork = {
   title: "Visual Identity for FLUX",
@@ -13,68 +15,22 @@ const featuredWork = {
   year: "2024"
 }
 
-const caseStudies = [
-  {
-    id: '1',
-    title: 'Kinetic Typography Exploration',
-    excerpt: 'Experimenting with motion and type to create dynamic visual narratives.',
+function transformSmakslyBlogToPost(blog: SmakslyBlog) {
+  const excerpt = blog.body
+    .replace(/<[^>]*>/g, '')
+    .substring(0, 150) + '...'
+
+  return {
+    id: blog.id,
+    title: blog.title,
+    excerpt,
     author: 'Studio',
-    date: '2024-03-15',
-    image: 'https://images.unsplash.com/photo-1558591710-4b4a1ae0f04d?w=800&h=600&fit=crop',
-    category: 'Typography',
-    readTime: '5 min read'
-  },
-  {
-    id: '2',
-    title: 'Minimalist Product Photography',
-    excerpt: 'Finding beauty in simplicity through careful composition and lighting.',
-    author: 'Studio',
-    date: '2024-03-10',
-    image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800&h=600&fit=crop',
-    category: 'Photography',
-    readTime: '4 min read'
-  },
-  {
-    id: '3',
-    title: 'Generative Art Systems',
-    excerpt: 'Creating algorithmic art that evolves and responds to its environment.',
-    author: 'Studio',
-    date: '2024-03-05',
-    image: 'https://images.unsplash.com/photo-1547826039-bfc35e0f1ea8?w=800&h=600&fit=crop',
-    category: 'Digital Art',
-    readTime: '6 min read'
-  },
-  {
-    id: '4',
-    title: 'Editorial Design: The Future Issue',
-    excerpt: 'A bold editorial direction exploring speculative futures and design fiction.',
-    author: 'Studio',
-    date: '2024-02-28',
-    image: 'https://images.unsplash.com/photo-1542831371-29b0f74f9713?w=800&h=600&fit=crop',
-    category: 'Editorial',
-    readTime: '7 min read'
-  },
-  {
-    id: '5',
-    title: 'Spatial Design for XR',
-    excerpt: 'Designing immersive experiences that blur the line between real and virtual.',
-    author: 'Studio',
-    date: '2024-02-20',
-    image: 'https://images.unsplash.com/photo-1617802690658-1173a812650d?w=800&h=600&fit=crop',
-    category: 'XR Design',
-    readTime: '8 min read'
-  },
-  {
-    id: '6',
-    title: 'Color Theory in Practice',
-    excerpt: 'Deep dive into color relationships and emotional impact in visual design.',
-    author: 'Studio',
-    date: '2024-02-15',
-    image: 'https://images.unsplash.com/photo-1525909002-1b05e0c869d8?w=800&h=600&fit=crop',
-    category: 'Theory',
-    readTime: '5 min read'
+    date: formatBlogDate(blog.publish_date),
+    image: blog.image_url || 'https://images.unsplash.com/photo-1558591710-4b4a1ae0f04d?w=800&h=600&fit=crop',
+    category: blog.category || 'Uncategorized',
+    readTime: estimateReadTime(blog.body)
   }
-]
+}
 
 const galleryImages = [
   { url: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600&h=800&fit=crop', title: 'Abstract Composition' },
@@ -85,7 +41,9 @@ const galleryImages = [
   { url: 'https://images.unsplash.com/photo-1541963463532-d68292c34b19?w=600&h=800&fit=crop', title: 'Digital Dreams' },
 ]
 
-export default function Home() {
+export default async function Home() {
+  const smakslyBlogs = await getSmakslyBlogs()
+  const caseStudies = smakslyBlogs.slice(0, 6).map(transformSmakslyBlogToPost)
   return (
     <>
       {/* Hero Section - Full Width Featured Work */}
@@ -133,17 +91,23 @@ export default function Home() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {caseStudies.map((post, index) => (
-                <motion.div
-                  key={post.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.5, delay: index * 0.1 }}
-                >
-                  <BlogCard {...post} />
-                </motion.div>
-              ))}
+              {caseStudies.length > 0 ? (
+                caseStudies.map((post, index) => (
+                  <motion.div
+                    key={post.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.5, delay: index * 0.1 }}
+                  >
+                    <BlogCard {...post} />
+                  </motion.div>
+                ))
+              ) : (
+                <div className="col-span-full text-center py-12">
+                  <p className="text-white/60 font-space">No case studies available yet.</p>
+                </div>
+              )}
             </div>
           </motion.div>
         </div>

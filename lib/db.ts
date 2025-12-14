@@ -1,4 +1,4 @@
-import { MongoClient, MongoClientOptions } from 'mongodb'
+import { MongoClient, MongoClientOptions, ObjectId } from 'mongodb'
 
 if (!process.env.MONGODB_URI) {
   throw new Error('Please add your MongoDB URI to .env.local')
@@ -34,6 +34,24 @@ export default clientPromise
 export async function getDatabase() {
   const client = await clientPromise
   return client.db('creative-portfolio')
+}
+
+// Project Interface
+export interface Project {
+  _id?: ObjectId
+  slug: string
+  title: string
+  description: string
+  content: string
+  category: string
+  images: string[]
+  client?: string
+  year: number
+  tags: string[]
+  featured: boolean
+  published: boolean
+  createdAt: Date
+  updatedAt: Date
 }
 
 export async function getAllPosts() {
@@ -154,4 +172,106 @@ export async function getPageViews(page: string, days: number = 30) {
     })
 
   return views
+}
+
+// Project CRUD Functions
+
+export async function getProjects(filter: Partial<Project> = {}) {
+  const db = await getDatabase()
+  const projects = await db
+    .collection<Project>('projects')
+    .find(filter)
+    .sort({ createdAt: -1 })
+    .toArray()
+
+  return projects
+}
+
+export async function getAllProjects() {
+  const db = await getDatabase()
+  const projects = await db
+    .collection<Project>('projects')
+    .find({})
+    .sort({ createdAt: -1 })
+    .toArray()
+
+  return projects
+}
+
+export async function getProjectById(id: string) {
+  const db = await getDatabase()
+  const project = await db
+    .collection<Project>('projects')
+    .findOne({ _id: new ObjectId(id) })
+
+  return project
+}
+
+export async function getProjectBySlug(slug: string) {
+  const db = await getDatabase()
+  const project = await db
+    .collection<Project>('projects')
+    .findOne({ slug })
+
+  return project
+}
+
+export async function createProject(project: Omit<Project, '_id' | 'createdAt' | 'updatedAt'>) {
+  const db = await getDatabase()
+  const result = await db.collection<Project>('projects').insertOne({
+    ...project,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  } as Project)
+
+  return result
+}
+
+export async function updateProject(id: string, updates: Partial<Project>) {
+  const db = await getDatabase()
+  const { _id, createdAt, ...updateData } = updates as any
+
+  const result = await db.collection<Project>('projects').updateOne(
+    { _id: new ObjectId(id) },
+    {
+      $set: {
+        ...updateData,
+        updatedAt: new Date()
+      }
+    }
+  )
+
+  return result
+}
+
+export async function deleteProject(id: string) {
+  const db = await getDatabase()
+  const result = await db.collection<Project>('projects').deleteOne({
+    _id: new ObjectId(id)
+  })
+
+  return result
+}
+
+export async function getFeaturedProjects(limit: number = 6) {
+  const db = await getDatabase()
+  const projects = await db
+    .collection<Project>('projects')
+    .find({ featured: true, published: true })
+    .sort({ createdAt: -1 })
+    .limit(limit)
+    .toArray()
+
+  return projects
+}
+
+export async function getProjectsByCategory(category: string) {
+  const db = await getDatabase()
+  const projects = await db
+    .collection<Project>('projects')
+    .find({ category, published: true })
+    .sort({ createdAt: -1 })
+    .toArray()
+
+  return projects
 }
